@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "desolint": {
+      "source": {
+        "source": "github",
+        "repo": "desolint/claude-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "desolint-dev-tools@desolint": true
+  }
+}
