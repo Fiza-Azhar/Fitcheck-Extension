@@ -7,9 +7,13 @@ import { Verdict } from '@/types/messages';
 // plus the honest loading / not-a-garment / signed-out / error states the design
 // requires. One handle is returned; the content script drives it with update().
 
+export type SaveState = 'idle' | 'saving' | 'saved';
+
 export type BadgeState =
   | { kind: 'loading' }
-  | { kind: 'verdict'; verdict: Verdict }
+  // onSave, when provided, renders a "Save to FitCheck" action; saveState drives
+  // its label. The content script owns the save and re-renders with the result.
+  | { kind: 'verdict'; verdict: Verdict; onSave?: () => void; saveState?: SaveState }
   | { kind: 'not_garment' }
   | { kind: 'signed_out' }
   | { kind: 'error'; message: string };
@@ -26,6 +30,7 @@ const C = {
   text: '#2E2A26',
   muted: '#8A8178',
   border: '#E7DDCD',
+  accent: '#C56B4A',
   success: '#4F8A5B',
   successBg: '#E6F1E8',
   warn: '#C98A2E',
@@ -69,6 +74,9 @@ const STYLE = `
 .note { font-size: 12.5px; font-weight: 500; color: ${C.muted}; margin: 11px 0 0; line-height: 1.45; }
 .thumbs { display: flex; gap: 8px; margin-top: 13px; }
 .thumb { flex: 0 0 auto; width: 52px; height: 64px; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid ${C.border}; box-shadow: 0 2px 6px rgba(58, 46, 34, 0.10); }
+.save { width: 100%; margin-top: 13px; padding: 9px; border: 1px solid ${C.border}; border-radius: 10px; background: transparent; color: ${C.text}; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.save:hover:not(:disabled) { background: rgba(46, 42, 38, 0.04); border-color: ${C.accent}; }
+.save:disabled { cursor: default; color: ${C.success}; border-color: ${C.successBg}; background: ${C.successBg}; }
 .spinner { width: 15px; height: 15px; border: 2px solid rgba(46, 42, 38, 0.15); border-top-color: ${C.text}; border-radius: 50%; display: inline-block; animation: fc-spin 0.7s linear infinite; }
 `;
 
@@ -112,7 +120,21 @@ function lead(variant: 'goes' | 'similar' | 'neutral', icon: string, headline: s
 // next; when neither applies the item is genuinely new, which we say plainly
 // instead of showing a confusing "goes with 0". The secondary count is surfaced
 // as a small line so no information is lost.
-function verdictBody(root: ShadowRoot, card: HTMLElement, v: Verdict): void {
+// The save action markup for a verdict, driven by saveState. Omitted entirely
+// when the caller provides no onSave handler.
+function saveButtonHtml(saveState: SaveState): string {
+  if (saveState === 'saved') return `<button class="save" disabled>✓ Saved to FitCheck</button>`;
+  const label = saveState === 'saving' ? 'Saving…' : '♡ Save to FitCheck';
+  return `<button class="save"${saveState === 'saving' ? ' disabled' : ''}>${label}</button>`;
+}
+
+function verdictBody(
+  root: ShadowRoot,
+  card: HTMLElement,
+  v: Verdict,
+  onSave: (() => void) | undefined,
+  saveState: SaveState,
+): void {
   const owned = v.alreadyOwn.length;
   const goes = v.goesWith.length;
 
@@ -135,7 +157,13 @@ function verdictBody(root: ShadowRoot, card: HTMLElement, v: Verdict): void {
       `<p class="note">Nothing similar in your wardrobe, and nothing to pair with it yet.</p>`;
   }
 
+  if (onSave) inner += saveButtonHtml(saveState);
+
   paint(root, card, cardVariant, inner);
+
+  if (onSave && saveState === 'idle') {
+    card.querySelector<HTMLButtonElement>('.save')?.addEventListener('click', onSave);
+  }
 }
 
 export function mountBadge(): BadgeHandle {
@@ -155,7 +183,7 @@ export function mountBadge(): BadgeHandle {
         paint(root, card, '', lead('neutral', '<span class="spinner"></span>', 'Checking your wardrobe…'));
         break;
       case 'verdict':
-        verdictBody(root, card, state.verdict);
+        verdictBody(root, card, state.verdict, state.onSave, state.saveState ?? 'idle');
         break;
       case 'not_garment':
         paint(root, card, '', `<p class="note">Not a clothing item — nothing to check.</p>`);
