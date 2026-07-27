@@ -1,4 +1,4 @@
-import { Garment } from '@/types/garment';
+import { Garment, GarmentDraft } from '@/types/garment';
 
 // The message contract between the content script and the service worker. The
 // content script scrapes a product and asks the worker for a verdict; the worker
@@ -25,10 +25,31 @@ export interface Verdict {
 }
 
 export type WorkerResponse =
-  | { type: 'VERDICT'; verdict: Verdict }
+  // `candidate` is the analyzed product garment — carried so the badge can save
+  // it to the wishlist without re-analyzing.
+  | { type: 'VERDICT'; verdict: Verdict; candidate: GarmentDraft }
   | { type: 'NOT_GARMENT' }
   | { type: 'SIGNED_OUT' }
   | { type: 'ERROR'; code: WorkerErrorCode; message: string };
+
+// A candidate garment plus the product context it came from — what "Save to
+// FitCheck" persists as a wishlist item.
+export interface WishlistDraft extends GarmentDraft {
+  productUrl: string | null;
+  imageUrl: string | null;
+  price: string | null;
+}
+
+export interface SaveWishlistRequest {
+  type: 'SAVE_WISHLIST';
+  item: WishlistDraft;
+}
+
+// Everything the service worker accepts over chrome.runtime.
+export type IncomingMessage = AnalyzeRequest | SaveWishlistRequest;
+
+// Reply to SAVE_WISHLIST. Errors reuse the WorkerResponse ERROR shape.
+export type SaveResponse = { type: 'WISHLIST_SAVED' } | { type: 'ERROR'; code: WorkerErrorCode; message: string };
 
 // The failure taxonomy from the design's error table. The badge maps each to a
 // specific message; nothing degrades to a silent empty state.

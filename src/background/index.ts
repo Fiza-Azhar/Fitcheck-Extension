@@ -1,9 +1,16 @@
-import { AnalyzeRequest, WorkerResponse } from '@/types/messages';
+import {
+  AnalyzeRequest,
+  IncomingMessage,
+  SaveResponse,
+  SaveWishlistRequest,
+  WorkerResponse,
+} from '@/types/messages';
 import { getSession } from '@/lib/auth';
 import { analyzeItem } from '@/lib/analyzeClient';
 import { getAnalyzeBaseUrl } from '@/lib/options';
 import { getWardrobe } from '@/lib/wardrobeCache';
 import { verdict } from '@/lib/matcher';
+import { logShopCheck, saveWishlistItem, ShopVerdictLabel } from '@/lib/shopSync';
 
 // The orchestrator. A content script sends one ANALYZE per product page; this
 // runs the whole pipeline and replies with exactly one typed outcome. Every
@@ -142,17 +149,53 @@ async function handleAnalyze(req: AnalyzeRequest): Promise<WorkerResponse> {
     };
   }
 
-  return { type: 'VERDICT', verdict: verdict(analysis.draft, wardrobe) };
+  const result = verdict(analysis.draft, wardrobe);
+
+  // Log the check to the app's feed — best-effort, never blocks or fails the
+  // verdict the user is waiting on.
+  const label: ShopVerdictLabel =
+    result.alreadyOwn.length > 0 ? 'similar' : result.goesWith.length > 0 ? 'goes' : 'fresh';
+  logShopCheck({
+    title: req.title,
+    productUrl: req.pageUrl,
+    imageUrl: req.imageUrl,
+    price: req.price,
+    category: analysis.draft.category,
+    color: analysis.draft.color,
+    verdict: label,
+    goesWithCount: result.goesWith.length,
+    alreadyOwnCount: result.alreadyOwn.length,
+  }).catch((e) => console.error('[FitCheck] shop-check log failed:', e));
+
+  return { type: 'VERDICT', verdict: result, candidate: analysis.draft };
+}
+
+async function handleSaveWishlist(req: SaveWishlistRequest): Promise<SaveResponse> {
+  if (!(await getSession())) {
+    return { type: 'ERROR', code: 'unknown', message: 'Sign in to save to your wishlist.' };
+  }
+  try {
+    await saveWishlistItem(req.item);
+    return { type: 'WISHLIST_SAVED' };
+  } catch (e) {
+    console.error('[FitCheck] wishlist save failed:', e);
+    return { type: 'ERROR', code: 'wardrobe_unreachable', message: "Couldn't save to your wishlist." };
+  }
 }
 
 // chrome.runtime message handlers must return `true` to keep the channel open for
 // an async reply. Any unexpected throw still yields a typed ERROR, never a hang.
-chrome.runtime.onMessage.addListener((message: AnalyzeRequest, _sender, sendResponse) => {
-  if (message?.type !== 'ANALYZE') return undefined;
-  handleAnalyze(message)
+chrome.runtime.onMessage.addListener((message: IncomingMessage, _sender, sendResponse) => {
+  const handler =
+    message?.type === 'ANALYZE'
+      ? handleAnalyze(message)
+      : message?.type === 'SAVE_WISHLIST'
+        ? handleSaveWishlist(message)
+        : null;
+  if (!handler) return undefined;
+
+  handler
     .then(sendResponse)
-    .catch((e) =>
-      sendResponse({ type: 'ERROR', code: 'unknown', message: String(e) } satisfies WorkerResponse),
-    );
+    .catch((e) => sendResponse({ type: 'ERROR', code: 'unknown', message: String(e) }));
   return true;
 });
