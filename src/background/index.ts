@@ -7,7 +7,7 @@ import {
 } from '@/types/messages';
 import { getSession } from '@/lib/auth';
 import { analyzeItem } from '@/lib/analyzeClient';
-import { getAnalyzeBaseUrl } from '@/lib/options';
+import { getApiBaseUrl } from '@/lib/options';
 import { getWardrobe } from '@/lib/wardrobeCache';
 import { verdict } from '@/lib/matcher';
 import { logShopCheck, saveWishlistItem, ShopVerdictLabel } from '@/lib/shopSync';
@@ -23,7 +23,7 @@ console.info('[FitCheck] service worker registered');
 // same-origin (its CorsMiddleware). Our fetch automatically carries
 // Origin: chrome-extension://<id>, which Expo blocks before the route runs. JS
 // can't remove/alter Origin on a fetch, so this declarativeNetRequest rule
-// rewrites it to a localhost origin — but only for requests to a local analyze
+// rewrites it to a localhost origin — but only for requests to a local FitCheck
 // server. A deployed (non-localhost) server is untouched and must handle CORS
 // itself. Registered on every worker start; updateDynamicRules is idempotent.
 const ORIGIN_RULE_ID = 1;
@@ -109,7 +109,7 @@ async function handleAnalyze(req: AnalyzeRequest): Promise<WorkerResponse> {
 
   let analysis;
   try {
-    analysis = await analyzeItem(imageBase64, await getAnalyzeBaseUrl());
+    analysis = await analyzeItem(imageBase64, await getApiBaseUrl());
   } catch (e) {
     // A fetch() network failure is a TypeError; a non-ok HTTP status is a plain
     // Error. Distinguish them so a server that answered with an error isn't
