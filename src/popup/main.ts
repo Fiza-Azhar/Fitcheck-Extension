@@ -1,9 +1,9 @@
 import { getSession, getUserEmail, signIn, signOut } from '@/lib/auth';
-import { getAnalyzeBaseUrl, setAnalyzeBaseUrl } from '@/lib/options';
+import { getApiBaseUrl, setApiBaseUrl } from '@/lib/options';
 import { clearWardrobe, getWardrobe } from '@/lib/wardrobeCache';
 
 // The popup: the one place the user signs in (the "same email" link) and points
-// the extension at the analyze server. Rendered from scratch on each state change
+// the extension at the FitCheck server. Rendered from scratch on each state change
 // so the signed-in and signed-out views never drift out of sync with reality.
 
 const root = document.getElementById('root')!;
@@ -25,28 +25,28 @@ function message(text: string, kind: 'err' | 'ok' | '' = ''): HTMLElement {
 // --- Settings block (shared by both views) -------------------------------------
 
 async function settingsBlock(): Promise<HTMLElement> {
-  const baseUrl = await getAnalyzeBaseUrl();
+  const baseUrl = await getApiBaseUrl();
   const input = el('input', { value: baseUrl, spellcheck: false });
   const status = message('');
 
   const save = el('button', { className: 'secondary', textContent: 'Save & test connection' });
   save.addEventListener('click', async () => {
     save.disabled = true;
-    await setAnalyzeBaseUrl(input.value);
+    await setApiBaseUrl(input.value);
     status.className = 'msg';
     status.textContent = 'Testing…';
     const reachable = await testConnection(input.value);
     status.className = `msg ${reachable ? 'ok' : 'err'}`;
     status.textContent = reachable
-      ? 'Analysis server reachable.'
-      : 'Could not reach the analysis server — is it running?';
+      ? 'FitCheck server reachable.'
+      : 'Could not reach the FitCheck server — is it running?';
     save.disabled = false;
   });
 
   return el('div', {}, [
     el('hr'),
-    el('div', { className: 'settings-title', textContent: 'Analysis server' }),
-    el('label', { textContent: 'Base URL of the FitCheck server (/api/analyze-item)' }),
+    el('div', { className: 'settings-title', textContent: 'FitCheck server' }),
+    el('label', { textContent: 'Base URL of the FitCheck server (auth, wardrobe, analyze-item)' }),
     input,
     save,
     status,

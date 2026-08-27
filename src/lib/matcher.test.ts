@@ -21,7 +21,6 @@ function garment(over: Partial<Garment> = {}): Garment {
     pattern: 'solid',
     seasons: ['spring'],
     occasions: ['office'],
-    wearCount: 0,
     imageUrl: null,
     cutoutUrl: null,
     ...over,

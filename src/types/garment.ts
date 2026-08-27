@@ -24,7 +24,6 @@ export interface Garment {
   pattern: string;
   seasons: SeasonName[];
   occasions: Occasion[];
-  wearCount: number;
   imageUrl: string | null;
   cutoutUrl: string | null;
 }
@@ -32,4 +31,4 @@ export interface Garment {
 // The fields the AI proposes for a product before it is a real garment — the
 // candidate the matcher compares against the wardrobe. Mirrors GarmentDraft in
 // the app (Garment minus the server-assigned/display fields).
-export type GarmentDraft = Omit<Garment, 'id' | 'imageUrl' | 'cutoutUrl' | 'wearCount'>;
+export type GarmentDraft = Omit<Garment, 'id' | 'imageUrl' | 'cutoutUrl'>;

@@ -41,9 +41,10 @@ export default defineManifest({
   // `declarativeNetRequest` lets the worker rewrite the Origin header on its calls
   // to the local analyze server — see the DNR rule in background/index.ts.
   permissions: ['storage', 'declarativeNetRequest'],
-  // The worker fetches product images from arbitrary CDNs, reaches Supabase, and
-  // reaches the analyze host. `<all_urls>` keeps the demo frictionless across
-  // unknown image hosts; a production build would narrow this to Supabase + the
-  // known marketplace image CDNs + the deployed analyze origin.
+  // The worker fetches product images from arbitrary CDNs and reaches the
+  // FitCheck server (auth, garments, wishlist, shop-checks, analyze-item).
+  // `<all_urls>` keeps the demo frictionless across unknown image hosts; a
+  // production build would narrow this to the known marketplace image CDNs +
+  // the deployed FitCheck origin.
   host_permissions: ['<all_urls>'],
 });

@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 
-// The build-time config the extension is compiled with. Only non-secret values
-// (Supabase URL + anon key, the default analyze host) are ever inlined here.
+// The build-time config the extension is compiled with. There's nothing secret
+// here — the API base URL is just a hostname, and every request is authorized
+// by the bearer token stored in chrome.storage, not by anything baked into
+// the build.
 interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string;
-  readonly VITE_SUPABASE_ANON_KEY: string;
-  readonly VITE_ANALYZE_BASE_URL: string;
+  readonly VITE_API_BASE_URL: string;
 }
 
 interface ImportMeta {
