@@ -1,16 +1,27 @@
-# FitCheck Shopping Extension
+# Fitcheck Extension
 
-A Manifest V3 Chrome extension that gives **wardrobe-aware buy/skip suggestions
-while you shop**. On a product page (Amazon, Daraz) it shows a floating badge:
+**A Chrome extension that tells you whether to buy or skip a piece of clothing, based on what's already in your wardrobe.**
 
-- **✓ Goes with N items you already own** — it complements your wardrobe, and
-- **⚠ You already own N similar items** — you own something like this, reconsider.
+Fitcheck Extension is the browser companion to the [Fitcheck mobile app](https://github.com/Fiza-Azhar/Fitcheck). While you browse a product page (Amazon, Daraz), it analyses the product photo with AI, compares it against the wardrobe you've built in the app, and shows a floating badge:
 
-It reads the **same wardrobe** you build in the [FitCheck mobile app](../fitcheck):
-you sign in with the **same email**, and the FitCheck server's `/api/**` routes
-return only your items, scoped by the JWT you get back from signing in. See
-[docs/](docs/) for the full design and implementation plan (predates the move
-off Supabase — see the app's own README for the current Neon-backed setup).
+- **✓ Goes with N items you already own** — it complements your wardrobe.
+- **⚠ You already own N similar items** — you own something like this, so reconsider.
+
+Products you check and save are synced back to the app's **Shop** tab (recent checks and wishlist).
+
+## Highlights
+
+- **Manifest V3** extension built with TypeScript and Vite ([@crxjs/vite-plugin](https://crxjs.dev)).
+- **Shadow-DOM badge** that stays isolated from the host page's styles.
+- **Per-site adapters** for Amazon and Daraz; adding a marketplace means adding one file.
+- **Deterministic matcher** — AI only reads the product photo; the buy/skip verdict is plain, testable logic with no AI in the loop.
+- **Same account as the app** — sign in with the same email and see the same wardrobe.
+- **No secrets in the extension** — it only holds a per-user JWT, never a database credential or AI key.
+- Unit tests (Vitest) for the matcher, analyze client and site adapters.
+
+## Tech stack
+
+TypeScript, Vite, Chrome Extensions Manifest V3, Vitest, jsdom. Backend is the Fitcheck server (Expo API routes, Neon Postgres, Groq vision).
 
 ## How it works
 
@@ -43,7 +54,7 @@ JWT it gets back from signing in.
 
 ## Demo runbook
 
-1. **Start the FitCheck server** (in `../fitcheck`): `npx expo start` — this serves
+1. **Start the FitCheck server** (in the [Fitcheck app repo](https://github.com/Fiza-Azhar/Fitcheck)): `npx expo start` — this serves
    `/api/analyze-item` plus auth/garments/wishlist/shop-checks, and needs
    `GROQ_API_KEY`, `DATABASE_URL`, and `JWT_SECRET` set. Note the port (default 8081).
 2. **Add a few items in the app** under an account, so verdicts are meaningful.
